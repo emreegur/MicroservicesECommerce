@@ -1,0 +1,91 @@
+services:
+# 1. Veritabanı (PostgreSQL)
+  postgres:
+    image: postgres:15
+    container_name: postgres
+    environment:
+      POSTGRES_USER: admin
+      POSTGRES_PASSWORD: password123
+      POSTGRES_DB: ECommerceDb # Bu varsayılan DB, ama biz diğerlerini init.sql ile açacağız
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+      - ./init.sql:/docker-entrypoint-initdb.d/init.sql  #oluşmadıkları için manuel ekledim.
+    networks:
+      - ecommerce-network
+
+  # 2. Kurye, mesaj taşıyıcı (RabbitMQ)
+  rabbitmq:
+    image: rabbitmq:3-management
+    container_name: rabbitmq
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+    networks:
+      - ecommerce-network
+
+  # 3. Ürün servisi
+  product-service:
+    build: ./ProductService
+    container_name: product-service
+    ports:
+      - "5050:8080"
+    environment:
+      - ASPNETCORE_URLS=http://+:8080
+      # Veritabanı Bağlantı Cümlesi (Docker içindeki 'postgres' makinesine bağlanır)
+      - ConnectionStrings__DefaultConnection=Host=postgres;Port=5432;Database=ProductDb;Username=admin;Password=password123
+    depends_on:
+      - postgres
+      - rabbitmq
+    networks:
+      - ecommerce-network
+
+  # 4. Sepet servisi
+  basket-service:
+    build: ./BasketService
+    container_name: basket-service
+    ports:
+      - "5001:5001"
+    environment:
+      - RABBITMQ_URL=amqp://rabbitmq
+    depends_on:
+      - rabbitmq
+    networks:
+      - ecommerce-network
+
+  # 5. Sipariş servisi
+  order-service:
+    build: ./OrderService
+    container_name: order-service
+    environment:
+      - RABBITMQ_HOST=rabbitmq
+      # Siparişler de aynı sunucuda ama farklı bir veritabanında (OrderDb) tutulabilir veya aynı DB'de farklı tablo olabilir.
+      # Şimdilik aynı DB'yi kullanalım:
+      - ConnectionStrings__DefaultConnection=Host=postgres;Port=5432;Database=OrderDb;Username=admin;Password=password123
+    depends_on:
+      - rabbitmq
+      - postgres
+    networks:
+      - ecommerce-network
+
+  # 6. Api Gateway (Ocelot) - Tüm istekler buradan geçecek
+  api-gateway:
+    build: ./ApiGateway
+    container_name: api-gateway
+    ports:
+      - "4000:8080" # Ana giriş kapımız burası!
+    environment:
+      - ASPNETCORE_URLS=http://+:8080
+    depends_on:
+      - product-service
+      - basket-service
+    networks:
+      - ecommerce-network
+
+volumes:
+  postgres-data:
+
+networks:
+  ecommerce-network:
+    driver: bridge

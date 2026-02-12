@@ -1,0 +1,19 @@
+# .net
+bin/
+obj/
+*.user
+*.pdb
+*.suo
+.vscode/
+
+# node.js
+node_modules/
+npm-debug.log
+
+# mac
+.DS_Store
+
+
+# docker ve veritabanı dosyaları
+postgres-data/
+*.log
