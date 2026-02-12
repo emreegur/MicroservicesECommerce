@@ -14,16 +14,16 @@ Farklı teknolojilerin (**Polyglot Architecture**) bir arada nasıl
 
 ``` mermaid
 graph LR
-    User[Müşteri / Client] -- HTTP (Port 4000) --> Gateway[API Gateway (Ocelot)]
+    User["Müşteri / Client"] -- "HTTP (Port 4000)" --> Gateway["API Gateway (Ocelot)"]
     
     subgraph Docker Network
-        Gateway -- /products --> Product[Product Service (.NET)]
-        Gateway -- /basket --> Basket[Basket Service (Node.js)]
+        Gateway -- "/products" --> Product["Product Service (.NET)"]
+        Gateway -- "/basket" --> Basket["Basket Service (Node.js)"]
         
-        Basket -- "Sipariş Oluşturuldu" (Event) --> RabbitMQ((RabbitMQ))
-        RabbitMQ --> Order[Order Service (.NET Worker)]
+        Basket -- "Sipariş Oluşturuldu (Event)" --> RabbitMQ(("RabbitMQ"))
+        RabbitMQ --> Order["Order Service (.NET Worker)"]
         
-        Product --> DB[(PostgreSQL)]
+        Product --> DB[("PostgreSQL")]
         Order --> DB
     end
 ```
